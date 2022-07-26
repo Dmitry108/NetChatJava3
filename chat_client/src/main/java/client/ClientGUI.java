@@ -94,6 +94,8 @@ public class ClientGUI extends JFrame implements Client, ActionListener, Thread.
             setAlwaysOnTop(onTopCheckBox.isSelected());
         } else if (source.equals(connectButton)) {
             connect();
+        } else if (source.equals(loginButton)) {
+            authorize(socketThread);
         } else if (source.equals(registerButton)) {
             openRegistrationForm();
         } else if (source.equals(sendButton) || source.equals(messageTextField)) {
@@ -120,6 +122,12 @@ public class ClientGUI extends JFrame implements Client, ActionListener, Thread.
 
     private void openRegistrationForm() {
         RegistrationGUI.getInstance().setVisible(true);
+    }
+
+    private void authorize(SocketThread thread) {
+        String login = loginTextField.getText();
+        String password = new String(passwordField.getPassword());
+        thread.sendMessage(ChatProtocol.getAuthRequest(login, password));
     }
 
     private void sendMessage() {
@@ -192,7 +200,6 @@ public class ClientGUI extends JFrame implements Client, ActionListener, Thread.
     }
 
     private void handleMessage(String message) {
-        System.out.println(message);
         String[] strArray = message.split(ChatProtocol.DELIMITER);
         String messageType = strArray[0];
         switch (messageType) {
@@ -200,6 +207,8 @@ public class ClientGUI extends JFrame implements Client, ActionListener, Thread.
                 putLog(message);
                 socketThread.close();
             }
+            case ChatProtocol.AUTH_ACCEPT -> setUIConnection(true, strArray[1]);
+            case ChatProtocol.AUTH_DENY -> putLog(message);
             case ChatProtocol.REGISTER_ACCESS -> putLog("Registration access");
             case ChatProtocol.REGISTER_DENY -> {
                 switch (strArray[1]) {

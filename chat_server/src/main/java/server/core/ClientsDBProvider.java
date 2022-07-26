@@ -30,19 +30,19 @@ public class ClientsDBProvider {
         }
     }
 
-    synchronized static String getNickname(String login, String password) {
-//        try {
-//            statement = connection.prepareStatement(AUTH_QUERY);
-//            statement.setString(1, login);
-//            statement.setString(2, password);
-//            ResultSet request = statement.executeQuery();
+    synchronized static String getNicknameByLoginAndPassword(String login, String password) {
+        try {
+            statement = connection.prepareStatement(AUTH_QUERY);
+            statement.setString(1, login);
+            statement.setString(2, password);
+            ResultSet request = statement.executeQuery();
 //            System.out.println(request.toString());
-//            if (request.next()) {
-//                return request.getString("nickname");
-//            }
-//        } catch (SQLException e) {
-//            throw new RuntimeException();
-//        }
+            if (request.next()) {
+                return request.getString("nickname");
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException();
+        }
         return null;
     }
 

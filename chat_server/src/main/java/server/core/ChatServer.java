@@ -146,30 +146,30 @@ public class ChatServer implements ServerSocketThreadListener, SocketThreadListe
     private void handleNotAuthMessage(ClientThread clientThread, String message) {
         String[] strArray = message.split(ChatProtocol.DELIMITER);
         switch (strArray[0]) {
-//            case NChMP.AUTH_REQUEST -> {
-//                if (strArray.length != 3) {
-//                    clientThread.messageFormatError(message);
-//                    return;
-//                }
-//                String login = strArray[1];
-//                String password = strArray[2];
-//                String nickname = ClientsDBProvider.getNickname(login, password);
-//                if (nickname == null) {
-//                    putLog("Invalid login attempt " + login);
-//                    clientThread.authFail();
-//                    return;
-//                } else {
-//                    ClientThread oldClient = findClientByNickname(nickname);
-//                    clientThread.authAccept(nickname);
-//                    if (oldClient == null) {
-//                        sendToAllAuthorizes(NChMP.getMessageBroadcast("Server", nickname + " connected"));
-//                    } else {
-//                        oldClient.reconnect();
-//                        clients.remove(oldClient);
-//                    }
-//                }
-//                sendToAllAuthorizes(NChMP.getUserList(getUsers()));
-//            }
+            case ChatProtocol.AUTH_REQUEST -> {
+                if (strArray.length != 3) {
+                    clientThread.messageFormatError(message);
+                    return;
+                }
+                String login = strArray[1];
+                String password = strArray[2];
+                String nickname = ClientsDBProvider.getNicknameByLoginAndPassword(login, password);
+                if (nickname == null) {
+                    putLog("Invalid login attempt " + login);
+                    clientThread.authFail();
+                    return;
+                } else {
+                    ClientThread oldClient = findClientByNickname(nickname);
+                    clientThread.authAccept(nickname);
+                    if (oldClient == null) {
+                        sendToAllAuthorizes(ChatProtocol.getMessageBroadcast("Server", nickname + " connected"));
+                    } else {
+                        oldClient.reconnect();
+                        clients.remove(oldClient);
+                    }
+                }
+                sendToAllAuthorizes(ChatProtocol.getUserList(getUsers()));
+            }
             case ChatProtocol.REGISTER_REQUEST -> {
                 if (strArray.length != 4) {
                     clientThread.messageFormatError(message);
