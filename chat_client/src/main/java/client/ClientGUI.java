@@ -15,7 +15,7 @@ import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.List;
 
-public class ClientGUI extends JFrame implements ActionListener, Thread.UncaughtExceptionHandler, SocketThreadListener {
+public class ClientGUI extends JFrame implements Client, ActionListener, Thread.UncaughtExceptionHandler, SocketThreadListener {
     private static final DateFormat DATE_FORMAT = new SimpleDateFormat("HH:mm:ss ");
     private static final int WIDTH = 600;
     private static final int HEIGHT = 300;
@@ -80,6 +80,7 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
         setUIConnection(false, null);
         setVisible(true);
         Thread.setDefaultUncaughtExceptionHandler(this);
+        RegistrationGUI.getInstance().setClient(this);
     }
 
     public static void main(String[] args) {
@@ -93,6 +94,8 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
             setAlwaysOnTop(onTopCheckBox.isSelected());
         } else if (source.equals(connectButton)) {
             connect();
+        } else if (source.equals(registerButton)) {
+            openRegistrationForm();
         } else if (source.equals(sendButton) || source.equals(messageTextField)) {
             sendMessage();
         } else if (source.equals(logoutButton)) {
@@ -113,6 +116,10 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
 
     private void disconnect() {
         socketThread.close();
+    }
+
+    private void openRegistrationForm() {
+        RegistrationGUI.getInstance().setVisible(true);
     }
 
     private void sendMessage() {
@@ -193,6 +200,15 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
                 putLog(message);
                 socketThread.close();
             }
+            case ChatProtocol.REGISTER_ACCESS -> putLog("Registration access");
+            case ChatProtocol.REGISTER_DENY -> {
+                switch (strArray[1]) {
+                    case ChatProtocol.LOGIN_EXISTS -> putLog("This login is already used");
+                    case ChatProtocol.NICKNAME_EXISTS -> putLog("This nickname is already used");
+                    case ChatProtocol.LOGIN_NICKNAME_EXISTS -> putLog("These login and nickname are already used");
+                    default -> putLog("Unknown register error");
+                }
+            }
             case ChatProtocol.USER_LIST -> {
                 String users = message.substring(ChatProtocol.USER_LIST.length() + ChatProtocol.DELIMITER.length());
                 String[] usersArray = users.split(ChatProtocol.DELIMITER);
@@ -212,5 +228,10 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
     @Override
     public void onSocketThreadException(SocketThread thread, Throwable throwable) {
         showException(thread, throwable);
+    }
+
+    @Override
+    public void register(String login, String nickname, String password) {
+        socketThread.sendMessage(ChatProtocol.getRegisterRequest(login, nickname, password));
     }
 }

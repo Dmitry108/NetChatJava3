@@ -49,11 +49,13 @@ public class ChatServer implements ServerSocketThreadListener, SocketThreadListe
     @Override
     public void onServerStart(ServerSocketThread thread) {
         putLog("Server thread started");
+        ClientsDBProvider.connect();
     }
 
     @Override
     public void onServerStop(ServerSocketThread thread) {
         putLog("Server thread stopped");
+        ClientsDBProvider.disconnect();
         clients.forEach(SocketThread::close);
     }
 
@@ -142,7 +144,44 @@ public class ChatServer implements ServerSocketThreadListener, SocketThreadListe
     }
 
     private void handleNotAuthMessage(ClientThread clientThread, String message) {
-
+        String[] strArray = message.split(ChatProtocol.DELIMITER);
+        switch (strArray[0]) {
+//            case NChMP.AUTH_REQUEST -> {
+//                if (strArray.length != 3) {
+//                    clientThread.messageFormatError(message);
+//                    return;
+//                }
+//                String login = strArray[1];
+//                String password = strArray[2];
+//                String nickname = ClientsDBProvider.getNickname(login, password);
+//                if (nickname == null) {
+//                    putLog("Invalid login attempt " + login);
+//                    clientThread.authFail();
+//                    return;
+//                } else {
+//                    ClientThread oldClient = findClientByNickname(nickname);
+//                    clientThread.authAccept(nickname);
+//                    if (oldClient == null) {
+//                        sendToAllAuthorizes(NChMP.getMessageBroadcast("Server", nickname + " connected"));
+//                    } else {
+//                        oldClient.reconnect();
+//                        clients.remove(oldClient);
+//                    }
+//                }
+//                sendToAllAuthorizes(NChMP.getUserList(getUsers()));
+//            }
+            case ChatProtocol.REGISTER_REQUEST -> {
+                if (strArray.length != 4) {
+                    clientThread.messageFormatError(message);
+                    return;
+                }
+                String login = strArray[1];
+                String nickname = strArray[2];
+                String password = strArray[3];
+                String registerResultCode = ClientsDBProvider.register(login, nickname, password);
+                clientThread.registerResponse(registerResultCode);
+            }
+        }
     }
 
     @Override
@@ -159,5 +198,17 @@ public class ChatServer implements ServerSocketThreadListener, SocketThreadListe
             }
         });
         return sb.toString();
+    }
+
+    private synchronized ClientThread findClientByNickname(String nickname) {
+        ClientThread client;
+        for (SocketThread socketThread : clients) {
+            client = (ClientThread) socketThread;
+            if (!client.getIsAuth()) continue;
+            if (client.getNickname().equals(nickname)) {
+                return client;
+            }
+        }
+        return null;
     }
 }

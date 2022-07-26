@@ -23,6 +23,14 @@ public class ClientThread extends SocketThread {
         return isAuth;
     }
 
+    public void registerResponse(String responseCode) {
+        if (responseCode.equals(ChatProtocol.ACCESS)) {
+            sendMessage(ChatProtocol.getRegisterAccess());
+        } else {
+            sendMessage(ChatProtocol.getRegisterDeny(responseCode));
+        }
+    }
+
     public void messageFormatError(String message) {
         sendMessage(ChatProtocol.getMessageFormatError(message));
         close();
