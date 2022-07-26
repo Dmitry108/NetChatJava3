@@ -8,6 +8,7 @@ import network.SocketThreadListener;
 
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.sql.SQLException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
@@ -121,6 +122,7 @@ public class ChatServer implements ServerSocketThreadListener, SocketThreadListe
                     ChatProtocol.getMessageBroadcast(clientThread.getNickname(), strArray[1]));
             case ChatProtocol.USER_PRIVATE -> sendPrivate(
                     ChatProtocol.getMessagePrivate(clientThread.getNickname(), strArray[1]), strArray[2]);
+            case ChatProtocol.UPDATE_NICKNAME_REQUEST -> updateNickname(clientThread, strArray[1], strArray[2]);
             default -> clientThread.messageFormatError(message);
         }
     }
@@ -141,6 +143,23 @@ public class ChatServer implements ServerSocketThreadListener, SocketThreadListe
                 client.sendMessage(message);
             }
         });
+    }
+
+    private void updateNickname(ClientThread client, String login, String nickname) {
+        try {
+            boolean isNicknameExist = ClientsDBProvider.checkNicknameExists(nickname);
+            if (isNicknameExist) {
+                client.updateNicknameDeny("This nickname is already used");
+            } else if (ClientsDBProvider.updateNickname(login, nickname)) {
+                client.updateNicknameAccess(nickname);
+                client.setNickname(nickname);
+                sendToAllAuthorizes(ChatProtocol.getUserList(getUsers()));
+            } else {
+                client.updateNicknameDeny("Error on updating");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 
     private void handleNotAuthMessage(ClientThread clientThread, String message) {

@@ -19,6 +19,10 @@ public class ClientThread extends SocketThread {
         return nickname;
     }
 
+    public void setNickname(String nickname) {
+        this.nickname = nickname;
+    }
+
     public boolean getIsAuth() {
         return isAuth;
     }
@@ -40,6 +44,15 @@ public class ClientThread extends SocketThread {
         } else {
             sendMessage(ChatProtocol.getRegisterDeny(responseCode));
         }
+    }
+
+    public void updateNicknameAccess(String nickname) {
+        this.nickname = nickname;
+        sendMessage(ChatProtocol.getUpdateNicknameAccess(nickname));
+    }
+
+    public void updateNicknameDeny(String message) {
+        sendMessage(ChatProtocol.getUpdateNicknameDeny(message));
     }
 
     public void messageFormatError(String message) {

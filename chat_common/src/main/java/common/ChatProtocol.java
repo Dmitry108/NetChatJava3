@@ -6,6 +6,11 @@ public class ChatProtocol {
 
     public static final String REGISTER_REQUEST = START + "register_request";
     public static final String REGISTER_ACCESS = START + "register_access";
+    public static final String REGISTER_DENY = START + "register_deny";
+
+    public static final String AUTH_REQUEST = START + "auth_request";
+    public static final String AUTH_ACCEPT = START + "auth_accept";
+    public static final String AUTH_DENY = START + "auth_deny";
 
     public static final String MESSAGE_BROADCAST = START + "message_broadcast";
     public static final String MESSAGE_PRIVATE = START + "message_private";
@@ -14,12 +19,9 @@ public class ChatProtocol {
     public static final String USER_BROADCAST = START + "user_broadcast";
     public static final String USER_PRIVATE = START + "user_private";
 
-    public static final String AUTH_REQUEST = START + "auth_request";
-    public static final String AUTH_ACCEPT = START + "auth_accept";
-    public static final String AUTH_DENY = START + "auth_deny";
-
-
-    public static final String REGISTER_DENY = START + "register_deny";
+    public static final String UPDATE_NICKNAME_REQUEST = START + "update_nickname_request";
+    public static final String UPDATE_NICKNAME_ACCESS = START + "update_nickname_access";
+    public static final String UPDATE_NICKNAME_DENY = START + "update_nickname_deny";
 
     public static final String ACCESS = "access";
     public static final String LOGIN_EXISTS = "login_exists";
@@ -75,5 +77,17 @@ public class ChatProtocol {
 
     public static String getUserList(String users) {
         return USER_LIST + DELIMITER + users;
+    }
+
+    public static String getUpdateNicknameRequest(String login, String nickname) {
+        return UPDATE_NICKNAME_REQUEST + DELIMITER + login + DELIMITER + nickname;
+    }
+
+    public static String getUpdateNicknameAccess(String nickname) {
+        return UPDATE_NICKNAME_ACCESS + DELIMITER + nickname;
+    }
+
+    public static String getUpdateNicknameDeny(String message) {
+        return UPDATE_NICKNAME_DENY + DELIMITER + message;
     }
 }

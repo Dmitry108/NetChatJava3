@@ -32,13 +32,16 @@ public class ClientGUI extends JFrame implements Client, ActionListener, Thread.
     private final JButton registerButton = new JButton("Register");
     private final JTextArea logTextArea = new JTextArea();
     private final JPanel panelBottom = new JPanel(new BorderLayout());
+//    private final JPanel panelBottom = new JPanel(new GridLayout(1, 4));
     private final JButton logoutButton = new JButton("Logout");
+    private final JButton accountButton = new JButton("Account");
     private final JTextField messageTextField = new JTextField();
     private final JButton sendButton = new JButton("Send");
     private final JList<String> usersList = new JList<>();
 
     private boolean shownIoErrors = false;
     private SocketThread socketThread;
+    private String nickname;
 
     public ClientGUI() {
         setDefaultCloseOperation(EXIT_ON_CLOSE);
@@ -60,7 +63,11 @@ public class ClientGUI extends JFrame implements Client, ActionListener, Thread.
         panelTop.add(passwordField);
         panelTop.add(loginButton);
         panelTop.add(registerButton);
-        panelBottom.add(logoutButton, BorderLayout.WEST);
+        JPanel panel = new JPanel(new GridLayout(1,2));
+        panel.add(accountButton);
+        panel.add(logoutButton);
+//        panelBottom.add(logoutButton, BorderLayout.WEST);
+        panelBottom.add(panel, BorderLayout.WEST);
         panelBottom.add(messageTextField, BorderLayout.CENTER);
         panelBottom.add(sendButton, BorderLayout.EAST);
         add(panelTop, BorderLayout.NORTH);
@@ -74,13 +81,14 @@ public class ClientGUI extends JFrame implements Client, ActionListener, Thread.
         messageTextField.addActionListener(this);
         loginButton.addActionListener(this);
         registerButton.addActionListener(this);
+        accountButton.addActionListener(this);
         logoutButton.addActionListener(this);
 
         setUIReady(false);
-        setUIConnection(false, null);
+        setUIConnection(false);
         setVisible(true);
         Thread.setDefaultUncaughtExceptionHandler(this);
-        RegistrationGUI.getInstance().setClient(this);
+
     }
 
     public static void main(String[] args) {
@@ -100,6 +108,8 @@ public class ClientGUI extends JFrame implements Client, ActionListener, Thread.
             openRegistrationForm();
         } else if (source.equals(sendButton) || source.equals(messageTextField)) {
             sendMessage();
+        } else if (source.equals(accountButton)) {
+            openAccountForm();
         } else if (source.equals(logoutButton)) {
             disconnect();
         } else {
@@ -121,7 +131,7 @@ public class ClientGUI extends JFrame implements Client, ActionListener, Thread.
     }
 
     private void openRegistrationForm() {
-        RegistrationGUI.getInstance().setVisible(true);
+        RegistrationGUI.getInstance().setClient(this).setVisible(true);
     }
 
     private void authorize(SocketThread thread) {
@@ -142,6 +152,7 @@ public class ClientGUI extends JFrame implements Client, ActionListener, Thread.
             StringBuilder sb = new StringBuilder();
             nicknames.forEach(user -> sb.append(user).append(ChatProtocol.DELIMITER));
             socketThread.sendMessage(ChatProtocol.getClientPrivate(text, sb.toString()));
+            usersList.clearSelection();
         }
     }
 
@@ -150,10 +161,10 @@ public class ClientGUI extends JFrame implements Client, ActionListener, Thread.
         registerButton.setEnabled(isReady);
     }
 
-    private void setUIConnection(boolean flag, String login) {
+    private void setUIConnection(boolean flag) {
         panelTop.setVisible(!flag);
         panelBottom.setVisible(flag);
-        setTitle(TITLE + (login != null ? " logged in as: " + login : ""));
+        setTitle(TITLE + (nickname != null ? " logged in as: " + nickname : ""));
         if (!flag) usersList.setListData(new String[0]);
     }
 
@@ -163,6 +174,10 @@ public class ClientGUI extends JFrame implements Client, ActionListener, Thread.
             logTextArea.append(message + "\n");
             logTextArea.setCaretPosition(logTextArea.getDocument().getLength());
         });
+    }
+
+    private void openAccountForm() {
+        AccountGUI.getInstance(loginTextField.getText(), nickname).setClient(this).setVisible(true);
     }
 
     public void showException(Thread thread, Throwable throwable) {
@@ -185,7 +200,8 @@ public class ClientGUI extends JFrame implements Client, ActionListener, Thread.
 
     @Override
     public void onSockedStop(SocketThread thread) {
-        setUIConnection(false, null);
+        nickname = null;
+        setUIConnection(false);
         setUIReady(false);
     }
 
@@ -207,7 +223,10 @@ public class ClientGUI extends JFrame implements Client, ActionListener, Thread.
                 putLog(message);
                 socketThread.close();
             }
-            case ChatProtocol.AUTH_ACCEPT -> setUIConnection(true, strArray[1]);
+            case ChatProtocol.AUTH_ACCEPT -> {
+                this.nickname = strArray[1];
+                setUIConnection(true);
+            }
             case ChatProtocol.AUTH_DENY -> putLog(message);
             case ChatProtocol.REGISTER_ACCESS -> putLog("Registration access");
             case ChatProtocol.REGISTER_DENY -> {
@@ -230,6 +249,13 @@ public class ClientGUI extends JFrame implements Client, ActionListener, Thread.
             case ChatProtocol.MESSAGE_PRIVATE -> putLog(String.format("%s: %s private: %s",
                     DATE_FORMAT.format(Long.parseLong(strArray[1])),
                     strArray[2], strArray[3]));
+            case ChatProtocol.UPDATE_NICKNAME_ACCESS -> putLog("Nickname was changed");
+            case ChatProtocol.UPDATE_NICKNAME_DENY -> {
+                switch (strArray[1]) {
+                    case ChatProtocol.LOGIN_EXISTS -> putLog("This login is already used");
+                    default -> putLog("Unknown update error");
+                }
+            }
             default -> throw new RuntimeException("Unknown message type: " + messageType);
         }
     }
@@ -242,5 +268,10 @@ public class ClientGUI extends JFrame implements Client, ActionListener, Thread.
     @Override
     public void register(String login, String nickname, String password) {
         socketThread.sendMessage(ChatProtocol.getRegisterRequest(login, nickname, password));
+    }
+
+    @Override
+    public void updateNickname(String login, String nickname) {
+        socketThread.sendMessage(ChatProtocol.getUpdateNicknameRequest(login, nickname));
     }
 }

@@ -12,6 +12,7 @@ public class ClientsDBProvider {
     private static final String AUTH_QUERY = "SELECT nickname FROM users WHERE login = ? AND password = ?;";
     private static final String LOGIN_EXISTS = "SELECT login FROM users WHERE login = ?;";
     private static final String NICKNAME_EXISTS = "SELECT nickname FROM users WHERE nickname = ?;";
+    private static final String UPDATE_NICKNAME = "UPDATE users SET nickname = ? WHERE login = ?;";
 
     synchronized static void connect() {
         try {
@@ -76,5 +77,17 @@ public class ClientsDBProvider {
         statement.setString(1, nickname);
         ResultSet request = statement.executeQuery();
         return request.next();
+    }
+
+    public static boolean updateNickname(String login, String nickname) {
+        try {
+            statement = connection.prepareStatement(UPDATE_NICKNAME);
+            statement.setString(1, nickname);
+            statement.setString(2, login);
+            return statement.executeUpdate() != 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
     }
 }
