@@ -15,8 +15,6 @@ public class AccountGUI extends JFrame implements ActionListener {
     private static final String TITLE = "Account";
 
     private Client client;
-    private String login;
-    private String nickname;
 
     private final JPanel panel = new JPanel(new GridLayout(4, 1));
     private final JLabel loginLabel = new JLabel("Login");
@@ -56,17 +54,10 @@ public class AccountGUI extends JFrame implements ActionListener {
         return instance;
     }
 
-    public static AccountGUI getInstance(String login, String nickname) {
-        AccountGUI account = getInstance();
-        account.login = login;
-        instance.loginTextField.setText(login);
-        account.nickname = nickname;
-        instance.nickTextField.setText(nickname);
-        return account;
-    }
-
     public AccountGUI setClient(Client client) {
         this.client = client;
+        loginTextField.setText(client.getLogin());
+        nickTextField.setText(client.getNickname());
         return this;
     }
 
@@ -88,8 +79,8 @@ public class AccountGUI extends JFrame implements ActionListener {
             nickTextField.requestFocus();
             return;
         }
-        if (!this.nickname.equals(nickname)) {
-            client.updateNickname(this.login, nickname);
+        if (!client.getNickname().equals(nickname)) {
+            client.updateNickname(client.getLogin(), nickname);
             setVisible(false);
         } else {
             errorLabel.setText("Nickname is not changed");

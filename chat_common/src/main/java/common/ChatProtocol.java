@@ -23,12 +23,6 @@ public class ChatProtocol {
     public static final String UPDATE_NICKNAME_ACCESS = START + "update_nickname_access";
     public static final String UPDATE_NICKNAME_DENY = START + "update_nickname_deny";
 
-    public static final String ACCESS = "access";
-    public static final String LOGIN_EXISTS = "login_exists";
-    public static final String NICKNAME_EXISTS = "nickname_exists";
-    public static final String LOGIN_NICKNAME_EXISTS = "login_nickname_exists";
-    public static final String ERROR = "error";
-
     public static String getAuthRequest(String login, String password) {
         return AUTH_REQUEST + DELIMITER + login + DELIMITER + password;
     }

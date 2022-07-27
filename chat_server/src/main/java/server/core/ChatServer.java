@@ -165,41 +165,57 @@ public class ChatServer implements ServerSocketThreadListener, SocketThreadListe
     private void handleNotAuthMessage(ClientThread clientThread, String message) {
         String[] strArray = message.split(ChatProtocol.DELIMITER);
         switch (strArray[0]) {
-            case ChatProtocol.AUTH_REQUEST -> {
-                if (strArray.length != 3) {
-                    clientThread.messageFormatError(message);
-                    return;
-                }
-                String login = strArray[1];
-                String password = strArray[2];
-                String nickname = ClientsDBProvider.getNicknameByLoginAndPassword(login, password);
-                if (nickname == null) {
-                    putLog("Invalid login attempt " + login);
-                    clientThread.authFail();
-                    return;
-                } else {
-                    ClientThread oldClient = findClientByNickname(nickname);
-                    clientThread.authAccept(nickname);
-                    if (oldClient == null) {
-                        sendToAllAuthorizes(ChatProtocol.getMessageBroadcast("Server", nickname + " connected"));
-                    } else {
-                        oldClient.reconnect();
-                        clients.remove(oldClient);
-                    }
-                }
-                sendToAllAuthorizes(ChatProtocol.getUserList(getUsers()));
+            case ChatProtocol.AUTH_REQUEST -> authorize(clientThread, message, strArray);
+            case ChatProtocol.REGISTER_REQUEST -> register(clientThread, message, strArray);
+        }
+    }
+
+    private void authorize(ClientThread clientThread, String message, String[] strArray) {
+        if (strArray.length != 3) {
+            clientThread.messageFormatError(message);
+            return;
+        }
+        String login = strArray[1];
+        String password = strArray[2];
+        String nickname = ClientsDBProvider.getNicknameByLoginAndPassword(login, password);
+        if (nickname == null) {
+            putLog("Invalid login attempt " + login);
+            clientThread.authFail();
+            return;
+        } else {
+            ClientThread oldClient = findClientByNickname(nickname);
+            clientThread.authAccept(nickname);
+            if (oldClient == null) {
+                sendToAllAuthorizes(ChatProtocol.getMessageBroadcast("Server", nickname + " connected"));
+            } else {
+                oldClient.reconnect();
+                clients.remove(oldClient);
             }
-            case ChatProtocol.REGISTER_REQUEST -> {
-                if (strArray.length != 4) {
-                    clientThread.messageFormatError(message);
-                    return;
-                }
-                String login = strArray[1];
-                String nickname = strArray[2];
-                String password = strArray[3];
-                String registerResultCode = ClientsDBProvider.register(login, nickname, password);
-                clientThread.registerResponse(registerResultCode);
-            }
+        }
+        sendToAllAuthorizes(ChatProtocol.getUserList(getUsers()));
+    }
+
+    private void register(ClientThread clientThread, String message, String[] strArray) {
+        if (strArray.length != 4) {
+            clientThread.messageFormatError(message);
+            return;
+        }
+        String login = strArray[1];
+        String nickname = strArray[2];
+        String password = strArray[3];
+        try {
+            boolean isLoginExist = ClientsDBProvider.checkLoginExists(login);
+            boolean isNicknameExist = ClientsDBProvider.checkNicknameExists(nickname);
+            if (isLoginExist) clientThread.registerFail("This login is already used");
+            if (isNicknameExist) clientThread.registerFail("This nickname is already used");
+            if (isLoginExist || isNicknameExist) return;
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        if (ClientsDBProvider.register(login, nickname, password)) {
+            clientThread.registerAccess();
+        } else {
+            clientThread.registerFail("Error on registration");
         }
     }
 

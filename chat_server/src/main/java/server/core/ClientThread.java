@@ -38,14 +38,6 @@ public class ClientThread extends SocketThread {
         close();
     }
 
-    public void registerResponse(String responseCode) {
-        if (responseCode.equals(ChatProtocol.ACCESS)) {
-            sendMessage(ChatProtocol.getRegisterAccess());
-        } else {
-            sendMessage(ChatProtocol.getRegisterDeny(responseCode));
-        }
-    }
-
     public void updateNicknameAccess(String nickname) {
         this.nickname = nickname;
         sendMessage(ChatProtocol.getUpdateNicknameAccess(nickname));
@@ -67,5 +59,13 @@ public class ClientThread extends SocketThread {
     public void reconnect() {
         isReconnection = true;
         close();
+    }
+
+    public void registerFail(String message) {
+        sendMessage(ChatProtocol.getRegisterDeny(message));
+    }
+
+    public void registerAccess() {
+        sendMessage(ChatProtocol.getRegisterAccess());
     }
 }

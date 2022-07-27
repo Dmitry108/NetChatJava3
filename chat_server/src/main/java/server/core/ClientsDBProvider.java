@@ -1,7 +1,5 @@
 package server.core;
 
-import common.ChatProtocol;
-
 import java.sql.*;
 
 public class ClientsDBProvider {
@@ -37,7 +35,6 @@ public class ClientsDBProvider {
             statement.setString(1, login);
             statement.setString(2, password);
             ResultSet request = statement.executeQuery();
-//            System.out.println(request.toString());
             if (request.next()) {
                 return request.getString("nickname");
             }
@@ -47,22 +44,17 @@ public class ClientsDBProvider {
         return null;
     }
 
-    public static String register(String login, String nickname, String password) {
+    public static boolean register(String login, String nickname, String password) {
         try {
-            boolean isLoginExist = checkLoginExists(login);
-            boolean isNicknameExist = checkNicknameExists(nickname);
-            if (isLoginExist && isNicknameExist) return ChatProtocol.LOGIN_NICKNAME_EXISTS;
-            if (isLoginExist) return ChatProtocol.LOGIN_EXISTS;
-            if (isNicknameExist) return ChatProtocol.NICKNAME_EXISTS;
             statement = connection.prepareStatement(REGISTER_QUERY);
             statement.setString(1, login);
             statement.setString(2, nickname);
             statement.setString(3, password);
-            if (statement.executeUpdate() != 0) return ChatProtocol.ACCESS;
+            return statement.executeUpdate() != 0;
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        return ChatProtocol.ERROR;
+        return false;
     }
 
     public static boolean checkLoginExists(String login) throws SQLException {

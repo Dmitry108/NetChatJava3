@@ -32,7 +32,6 @@ public class ClientGUI extends JFrame implements Client, ActionListener, Thread.
     private final JButton registerButton = new JButton("Register");
     private final JTextArea logTextArea = new JTextArea();
     private final JPanel panelBottom = new JPanel(new BorderLayout());
-//    private final JPanel panelBottom = new JPanel(new GridLayout(1, 4));
     private final JButton logoutButton = new JButton("Logout");
     private final JButton accountButton = new JButton("Account");
     private final JTextField messageTextField = new JTextField();
@@ -93,6 +92,16 @@ public class ClientGUI extends JFrame implements Client, ActionListener, Thread.
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(ClientGUI::new);
+    }
+
+    @Override
+    public String getNickname() {
+        return nickname;
+    }
+
+    @Override
+    public String getLogin() {
+        return loginTextField.getText();
     }
 
     @Override
@@ -177,7 +186,7 @@ public class ClientGUI extends JFrame implements Client, ActionListener, Thread.
     }
 
     private void openAccountForm() {
-        AccountGUI.getInstance(loginTextField.getText(), nickname).setClient(this).setVisible(true);
+        AccountGUI.getInstance().setClient(this).setVisible(true);
     }
 
     public void showException(Thread thread, Throwable throwable) {
@@ -229,14 +238,7 @@ public class ClientGUI extends JFrame implements Client, ActionListener, Thread.
             }
             case ChatProtocol.AUTH_DENY -> putLog(message);
             case ChatProtocol.REGISTER_ACCESS -> putLog("Registration access");
-            case ChatProtocol.REGISTER_DENY -> {
-                switch (strArray[1]) {
-                    case ChatProtocol.LOGIN_EXISTS -> putLog("This login is already used");
-                    case ChatProtocol.NICKNAME_EXISTS -> putLog("This nickname is already used");
-                    case ChatProtocol.LOGIN_NICKNAME_EXISTS -> putLog("These login and nickname are already used");
-                    default -> putLog("Unknown register error");
-                }
-            }
+            case ChatProtocol.REGISTER_DENY -> putLog(strArray[1]);
             case ChatProtocol.USER_LIST -> {
                 String users = message.substring(ChatProtocol.USER_LIST.length() + ChatProtocol.DELIMITER.length());
                 String[] usersArray = users.split(ChatProtocol.DELIMITER);
@@ -249,13 +251,11 @@ public class ClientGUI extends JFrame implements Client, ActionListener, Thread.
             case ChatProtocol.MESSAGE_PRIVATE -> putLog(String.format("%s: %s private: %s",
                     DATE_FORMAT.format(Long.parseLong(strArray[1])),
                     strArray[2], strArray[3]));
-            case ChatProtocol.UPDATE_NICKNAME_ACCESS -> putLog("Nickname was changed");
-            case ChatProtocol.UPDATE_NICKNAME_DENY -> {
-                switch (strArray[1]) {
-                    case ChatProtocol.LOGIN_EXISTS -> putLog("This login is already used");
-                    default -> putLog("Unknown update error");
-                }
+            case ChatProtocol.UPDATE_NICKNAME_ACCESS -> {
+                this.nickname = strArray[1];
+                putLog("Nickname was changed");
             }
+            case ChatProtocol.UPDATE_NICKNAME_DENY -> putLog(strArray[1]);
             default -> throw new RuntimeException("Unknown message type: " + messageType);
         }
     }
