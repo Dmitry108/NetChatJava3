@@ -15,7 +15,7 @@ import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.List;
 
-public class ClientGUI extends JFrame implements ActionListener, Thread.UncaughtExceptionHandler, SocketThreadListener {
+public class ClientGUI extends JFrame implements Client, ActionListener, Thread.UncaughtExceptionHandler, SocketThreadListener {
     private static final DateFormat DATE_FORMAT = new SimpleDateFormat("HH:mm:ss ");
     private static final int WIDTH = 600;
     private static final int HEIGHT = 300;
@@ -33,12 +33,14 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
     private final JTextArea logTextArea = new JTextArea();
     private final JPanel panelBottom = new JPanel(new BorderLayout());
     private final JButton logoutButton = new JButton("Logout");
+    private final JButton accountButton = new JButton("Account");
     private final JTextField messageTextField = new JTextField();
     private final JButton sendButton = new JButton("Send");
     private final JList<String> usersList = new JList<>();
 
     private boolean shownIoErrors = false;
     private SocketThread socketThread;
+    private String nickname;
 
     public ClientGUI() {
         setDefaultCloseOperation(EXIT_ON_CLOSE);
@@ -60,7 +62,11 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
         panelTop.add(passwordField);
         panelTop.add(loginButton);
         panelTop.add(registerButton);
-        panelBottom.add(logoutButton, BorderLayout.WEST);
+        JPanel panel = new JPanel(new GridLayout(1,2));
+        panel.add(accountButton);
+        panel.add(logoutButton);
+//        panelBottom.add(logoutButton, BorderLayout.WEST);
+        panelBottom.add(panel, BorderLayout.WEST);
         panelBottom.add(messageTextField, BorderLayout.CENTER);
         panelBottom.add(sendButton, BorderLayout.EAST);
         add(panelTop, BorderLayout.NORTH);
@@ -74,16 +80,28 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
         messageTextField.addActionListener(this);
         loginButton.addActionListener(this);
         registerButton.addActionListener(this);
+        accountButton.addActionListener(this);
         logoutButton.addActionListener(this);
 
         setUIReady(false);
-        setUIConnection(false, null);
+        setUIConnection(false);
         setVisible(true);
         Thread.setDefaultUncaughtExceptionHandler(this);
+
     }
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(ClientGUI::new);
+    }
+
+    @Override
+    public String getNickname() {
+        return nickname;
+    }
+
+    @Override
+    public String getLogin() {
+        return loginTextField.getText();
     }
 
     @Override
@@ -93,8 +111,14 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
             setAlwaysOnTop(onTopCheckBox.isSelected());
         } else if (source.equals(connectButton)) {
             connect();
+        } else if (source.equals(loginButton)) {
+            authorize(socketThread);
+        } else if (source.equals(registerButton)) {
+            openRegistrationForm();
         } else if (source.equals(sendButton) || source.equals(messageTextField)) {
             sendMessage();
+        } else if (source.equals(accountButton)) {
+            openAccountForm();
         } else if (source.equals(logoutButton)) {
             disconnect();
         } else {
@@ -115,6 +139,16 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
         socketThread.close();
     }
 
+    private void openRegistrationForm() {
+        RegistrationGUI.getInstance().setClient(this).setVisible(true);
+    }
+
+    private void authorize(SocketThread thread) {
+        String login = loginTextField.getText();
+        String password = new String(passwordField.getPassword());
+        thread.sendMessage(ChatProtocol.getAuthRequest(login, password));
+    }
+
     private void sendMessage() {
         String text = messageTextField.getText();
         if (text.equals("")) return;
@@ -127,6 +161,7 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
             StringBuilder sb = new StringBuilder();
             nicknames.forEach(user -> sb.append(user).append(ChatProtocol.DELIMITER));
             socketThread.sendMessage(ChatProtocol.getClientPrivate(text, sb.toString()));
+            usersList.clearSelection();
         }
     }
 
@@ -135,10 +170,10 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
         registerButton.setEnabled(isReady);
     }
 
-    private void setUIConnection(boolean flag, String login) {
+    private void setUIConnection(boolean flag) {
         panelTop.setVisible(!flag);
         panelBottom.setVisible(flag);
-        setTitle(TITLE + (login != null ? " logged in as: " + login : ""));
+        setTitle(TITLE + (nickname != null ? " logged in as: " + nickname : ""));
         if (!flag) usersList.setListData(new String[0]);
     }
 
@@ -148,6 +183,10 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
             logTextArea.append(message + "\n");
             logTextArea.setCaretPosition(logTextArea.getDocument().getLength());
         });
+    }
+
+    private void openAccountForm() {
+        AccountGUI.getInstance().setClient(this).setVisible(true);
     }
 
     public void showException(Thread thread, Throwable throwable) {
@@ -170,7 +209,8 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
 
     @Override
     public void onSockedStop(SocketThread thread) {
-        setUIConnection(false, null);
+        nickname = null;
+        setUIConnection(false);
         setUIReady(false);
     }
 
@@ -185,7 +225,6 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
     }
 
     private void handleMessage(String message) {
-        System.out.println(message);
         String[] strArray = message.split(ChatProtocol.DELIMITER);
         String messageType = strArray[0];
         switch (messageType) {
@@ -193,6 +232,13 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
                 putLog(message);
                 socketThread.close();
             }
+            case ChatProtocol.AUTH_ACCEPT -> {
+                this.nickname = strArray[1];
+                setUIConnection(true);
+            }
+            case ChatProtocol.AUTH_DENY -> putLog(message);
+            case ChatProtocol.REGISTER_ACCESS -> putLog("Registration access");
+            case ChatProtocol.REGISTER_DENY -> putLog(strArray[1]);
             case ChatProtocol.USER_LIST -> {
                 String users = message.substring(ChatProtocol.USER_LIST.length() + ChatProtocol.DELIMITER.length());
                 String[] usersArray = users.split(ChatProtocol.DELIMITER);
@@ -205,6 +251,11 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
             case ChatProtocol.MESSAGE_PRIVATE -> putLog(String.format("%s: %s private: %s",
                     DATE_FORMAT.format(Long.parseLong(strArray[1])),
                     strArray[2], strArray[3]));
+            case ChatProtocol.UPDATE_NICKNAME_ACCESS -> {
+                this.nickname = strArray[1];
+                putLog("Nickname was changed");
+            }
+            case ChatProtocol.UPDATE_NICKNAME_DENY -> putLog(strArray[1]);
             default -> throw new RuntimeException("Unknown message type: " + messageType);
         }
     }
@@ -212,5 +263,15 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
     @Override
     public void onSocketThreadException(SocketThread thread, Throwable throwable) {
         showException(thread, throwable);
+    }
+
+    @Override
+    public void register(String login, String nickname, String password) {
+        socketThread.sendMessage(ChatProtocol.getRegisterRequest(login, nickname, password));
+    }
+
+    @Override
+    public void updateNickname(String login, String nickname) {
+        socketThread.sendMessage(ChatProtocol.getUpdateNicknameRequest(login, nickname));
     }
 }

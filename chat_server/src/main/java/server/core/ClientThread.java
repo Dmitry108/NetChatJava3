@@ -19,8 +19,32 @@ public class ClientThread extends SocketThread {
         return nickname;
     }
 
+    public void setNickname(String nickname) {
+        this.nickname = nickname;
+    }
+
     public boolean getIsAuth() {
         return isAuth;
+    }
+
+    public void authAccept(String nickname) {
+        this.nickname = nickname;
+        this.isAuth = true;
+        sendMessage(ChatProtocol.getAuthAccept(nickname));
+    }
+
+    public void authFail() {
+        sendMessage(ChatProtocol.getAuthDenied());
+        close();
+    }
+
+    public void updateNicknameAccess(String nickname) {
+        this.nickname = nickname;
+        sendMessage(ChatProtocol.getUpdateNicknameAccess(nickname));
+    }
+
+    public void updateNicknameDeny(String message) {
+        sendMessage(ChatProtocol.getUpdateNicknameDeny(message));
     }
 
     public void messageFormatError(String message) {
@@ -35,5 +59,13 @@ public class ClientThread extends SocketThread {
     public void reconnect() {
         isReconnection = true;
         close();
+    }
+
+    public void registerFail(String message) {
+        sendMessage(ChatProtocol.getRegisterDeny(message));
+    }
+
+    public void registerAccess() {
+        sendMessage(ChatProtocol.getRegisterAccess());
     }
 }

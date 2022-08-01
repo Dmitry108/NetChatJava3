@@ -8,6 +8,7 @@ import network.SocketThreadListener;
 
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.sql.SQLException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
@@ -49,11 +50,13 @@ public class ChatServer implements ServerSocketThreadListener, SocketThreadListe
     @Override
     public void onServerStart(ServerSocketThread thread) {
         putLog("Server thread started");
+        ClientsDBProvider.connect();
     }
 
     @Override
     public void onServerStop(ServerSocketThread thread) {
         putLog("Server thread stopped");
+        ClientsDBProvider.disconnect();
         clients.forEach(SocketThread::close);
     }
 
@@ -119,6 +122,7 @@ public class ChatServer implements ServerSocketThreadListener, SocketThreadListe
                     ChatProtocol.getMessageBroadcast(clientThread.getNickname(), strArray[1]));
             case ChatProtocol.USER_PRIVATE -> sendPrivate(
                     ChatProtocol.getMessagePrivate(clientThread.getNickname(), strArray[1]), strArray[2]);
+            case ChatProtocol.UPDATE_NICKNAME_REQUEST -> updateNickname(clientThread, strArray[1], strArray[2]);
             default -> clientThread.messageFormatError(message);
         }
     }
@@ -141,8 +145,78 @@ public class ChatServer implements ServerSocketThreadListener, SocketThreadListe
         });
     }
 
-    private void handleNotAuthMessage(ClientThread clientThread, String message) {
+    private void updateNickname(ClientThread client, String login, String nickname) {
+        try {
+            boolean isNicknameExist = ClientsDBProvider.checkNicknameExists(nickname);
+            if (isNicknameExist) {
+                client.updateNicknameDeny("This nickname is already used");
+            } else if (ClientsDBProvider.updateNickname(login, nickname)) {
+                client.updateNicknameAccess(nickname);
+                client.setNickname(nickname);
+                sendToAllAuthorizes(ChatProtocol.getUserList(getUsers()));
+            } else {
+                client.updateNicknameDeny("Error on updating");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
 
+    private void handleNotAuthMessage(ClientThread clientThread, String message) {
+        String[] strArray = message.split(ChatProtocol.DELIMITER);
+        switch (strArray[0]) {
+            case ChatProtocol.AUTH_REQUEST -> authorize(clientThread, message, strArray);
+            case ChatProtocol.REGISTER_REQUEST -> register(clientThread, message, strArray);
+        }
+    }
+
+    private void authorize(ClientThread clientThread, String message, String[] strArray) {
+        if (strArray.length != 3) {
+            clientThread.messageFormatError(message);
+            return;
+        }
+        String login = strArray[1];
+        String password = strArray[2];
+        String nickname = ClientsDBProvider.getNicknameByLoginAndPassword(login, password);
+        if (nickname == null) {
+            putLog("Invalid login attempt " + login);
+            clientThread.authFail();
+            return;
+        } else {
+            ClientThread oldClient = findClientByNickname(nickname);
+            clientThread.authAccept(nickname);
+            if (oldClient == null) {
+                sendToAllAuthorizes(ChatProtocol.getMessageBroadcast("Server", nickname + " connected"));
+            } else {
+                oldClient.reconnect();
+                clients.remove(oldClient);
+            }
+        }
+        sendToAllAuthorizes(ChatProtocol.getUserList(getUsers()));
+    }
+
+    private void register(ClientThread clientThread, String message, String[] strArray) {
+        if (strArray.length != 4) {
+            clientThread.messageFormatError(message);
+            return;
+        }
+        String login = strArray[1];
+        String nickname = strArray[2];
+        String password = strArray[3];
+        try {
+            boolean isLoginExist = ClientsDBProvider.checkLoginExists(login);
+            boolean isNicknameExist = ClientsDBProvider.checkNicknameExists(nickname);
+            if (isLoginExist) clientThread.registerFail("This login is already used");
+            if (isNicknameExist) clientThread.registerFail("This nickname is already used");
+            if (isLoginExist || isNicknameExist) return;
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        if (ClientsDBProvider.register(login, nickname, password)) {
+            clientThread.registerAccess();
+        } else {
+            clientThread.registerFail("Error on registration");
+        }
     }
 
     @Override
@@ -159,5 +233,17 @@ public class ChatServer implements ServerSocketThreadListener, SocketThreadListe
             }
         });
         return sb.toString();
+    }
+
+    private synchronized ClientThread findClientByNickname(String nickname) {
+        ClientThread client;
+        for (SocketThread socketThread : clients) {
+            client = (ClientThread) socketThread;
+            if (!client.getIsAuth()) continue;
+            if (client.getNickname().equals(nickname)) {
+                return client;
+            }
+        }
+        return null;
     }
 }
