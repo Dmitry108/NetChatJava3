@@ -45,29 +45,6 @@ public class MessagesLog {
         return log;
     }
 
-//    вариант получения произвольного количества последних записей при помощи RandomAccessFile
-//    работает медленнее
-//    public StringBuffer readrr(int n){
-////        StringBuffer sb = new StringBuffer();
-////        if (logFile.length() == 0) return sb;
-//        int c;
-//        lineCount
-//        while ((c = in.read()) != -1 || )
-//        try (RandomAccessFile raf = new RandomAccessFile(logFile, "r")) {
-//            //цикл проходится по файлу с конца, пока не прочитает 100 строчек
-//            //k - счетчик встретившихся символов новой строки
-//            byte c[] = new byte[(int)logFile.length()];
-//            for(int i=(int)raf.length()-2, k=0; i>=0; i--){
-//                raf.seek(i);
-//                if ((c[i]=(byte)raf.read())=='\n') if (++k==n) break;
-//            }
-//            sb = new StringBuffer(new String(c, "UTF-8"));
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-//        return sb;
-//    }
-
     public void write(String message) {
         try {
             out.write(String.format("%s%n", message));
