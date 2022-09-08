@@ -1,5 +1,7 @@
 package server.core;
 
+import server.utils.ServerLogger;
+
 import java.sql.*;
 
 public class ClientsDBProvider {
@@ -17,6 +19,7 @@ public class ClientsDBProvider {
             Class.forName("org.sqlite.JDBC");
             connection = DriverManager.getConnection("jdbc:sqlite:chat_server/src/main/resources/clients.db");
         } catch (ClassNotFoundException | SQLException e) {
+            ServerLogger.severe(e.getMessage());
             throw new RuntimeException(e);
         }
     }
@@ -25,6 +28,7 @@ public class ClientsDBProvider {
         try {
             connection.close();
         } catch (SQLException e) {
+            ServerLogger.severe(e.getMessage());
             throw new RuntimeException();
         }
     }
@@ -39,6 +43,7 @@ public class ClientsDBProvider {
                 return request.getString("nickname");
             }
         } catch (SQLException e) {
+            ServerLogger.severe(e.getMessage());
             throw new RuntimeException();
         }
         return null;
@@ -52,6 +57,7 @@ public class ClientsDBProvider {
             statement.setString(3, password);
             return statement.executeUpdate() != 0;
         } catch (SQLException e) {
+            ServerLogger.severe(e.getMessage());
             e.printStackTrace();
         }
         return false;
@@ -78,6 +84,7 @@ public class ClientsDBProvider {
             statement.setString(2, login);
             return statement.executeUpdate() != 0;
         } catch (SQLException e) {
+            ServerLogger.severe(e.getMessage());
             e.printStackTrace();
         }
         return false;

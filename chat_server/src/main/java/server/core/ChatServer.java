@@ -5,6 +5,7 @@ import network.ServerSocketThread;
 import network.ServerSocketThreadListener;
 import network.SocketThread;
 import network.SocketThreadListener;
+import server.utils.ServerLogger;
 
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -79,6 +80,7 @@ public class ChatServer implements ServerSocketThreadListener, SocketThreadListe
 
     @Override
     public void onServerException(ServerSocketThread thread, Throwable throwable) {
+        ServerLogger.warning(throwable.getMessage());
         throwable.printStackTrace();
     }
 
@@ -93,7 +95,9 @@ public class ChatServer implements ServerSocketThreadListener, SocketThreadListe
         clients.remove(client);
         //специальное служебное сообщение
         if (client.getIsAuth() && !client.isReconnection()) {
-            sendToAllAuthorizes(ChatProtocol.getMessageBroadcast("Server", client.getNickname() + " disconnected"));
+            String message = client.getNickname() + " disconnected";
+            ServerLogger.finer(message);
+            sendToAllAuthorizes(ChatProtocol.getMessageBroadcast("Server", message));
         }
         sendToAllAuthorizes(ChatProtocol.getUserList(getUsers()));
     }
@@ -158,6 +162,7 @@ public class ChatServer implements ServerSocketThreadListener, SocketThreadListe
                 client.updateNicknameDeny("Error on updating");
             }
         } catch (SQLException e) {
+            ServerLogger.warning(e.getMessage());
             e.printStackTrace();
         }
     }
@@ -186,7 +191,8 @@ public class ChatServer implements ServerSocketThreadListener, SocketThreadListe
             ClientThread oldClient = findClientByNickname(nickname);
             clientThread.authAccept(nickname);
             if (oldClient == null) {
-                sendToAllAuthorizes(ChatProtocol.getMessageBroadcast("Server", nickname + " connected"));
+                String msg = nickname + " connected";
+                sendToAllAuthorizes(ChatProtocol.getMessageBroadcast("Server", msg));
             } else {
                 oldClient.reconnect();
                 clients.remove(oldClient);
@@ -210,6 +216,7 @@ public class ChatServer implements ServerSocketThreadListener, SocketThreadListe
             if (isNicknameExist) clientThread.registerFail("This nickname is already used");
             if (isLoginExist || isNicknameExist) return;
         } catch (SQLException e) {
+            ServerLogger.warning(e.getMessage());
             e.printStackTrace();
         }
         if (ClientsDBProvider.register(login, nickname, password)) {
@@ -221,6 +228,7 @@ public class ChatServer implements ServerSocketThreadListener, SocketThreadListe
 
     @Override
     public synchronized void onSocketThreadException(SocketThread thread, Throwable throwable) {
+        ServerLogger.warning(throwable.getMessage());
         throwable.printStackTrace();
     }
 
