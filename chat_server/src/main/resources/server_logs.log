@@ -1,0 +1,5 @@
+FINER	Thu Sep 08 11:39:34 MSK 2022	11:39:34  Chat server: Server thread started	server.utils.ServerLogger
+FINER	Thu Sep 08 11:39:34 MSK 2022	11:39:34  Chat server: Server socket created	server.utils.ServerLogger
+FINER	Thu Sep 08 11:39:40 MSK 2022	11:39:40  Chat server: Client connected	server.utils.ServerLogger
+FINER	Thu Sep 08 11:39:40 MSK 2022	11:39:40  SocketThread /127.0.0.1: 59535: Client connected	server.utils.ServerLogger
+FINER	Thu Sep 08 11:39:40 MSK 2022	11:39:40  SocketThread /127.0.0.1: 59535: Client is ready	server.utils.ServerLogger

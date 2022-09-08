@@ -2,6 +2,7 @@ package server.gui;
 
 import server.core.ChatServer;
 import server.core.ChatServerListener;
+import server.utils.ServerLogger;
 
 import javax.swing.*;
 import java.awt.*;
@@ -51,12 +52,15 @@ public class ServerGUI extends JFrame implements ActionListener, Thread.Uncaught
         } else if (source.equals(stopButton)) {
             server.stop();
         } else {
-            throw new IllegalStateException("Unexpected event");
+            String message = "Unexpected event";
+            ServerLogger.severe(message);
+            throw new IllegalStateException(message);
         }
     }
 
     @Override
     public void uncaughtException(Thread thread, Throwable throwable) {
+        ServerLogger.severe(throwable.getMessage());
         throwable.printStackTrace();
     }
 
@@ -66,5 +70,6 @@ public class ServerGUI extends JFrame implements ActionListener, Thread.Uncaught
             log.append(message + "\n");
             log.setCaretPosition(log.getDocument().getLength());
         });
+        ServerLogger.finer(message);
     }
 }
