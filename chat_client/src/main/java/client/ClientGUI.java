@@ -40,6 +40,7 @@ public class ClientGUI extends JFrame implements Client, ActionListener, Thread.
 
     private boolean shownIoErrors = false;
     private SocketThread socketThread;
+    private MessagesLog messagesLog;
     private String nickname;
 
     public ClientGUI() {
@@ -234,30 +235,34 @@ public class ClientGUI extends JFrame implements Client, ActionListener, Thread.
             }
             case ChatProtocol.AUTH_ACCEPT -> {
                 this.nickname = strArray[1];
+                messagesLog = new MessagesLog(loginTextField.getText());
                 setUIConnection(true);
+                putLog(messagesLog.read(100).toString());
             }
             case ChatProtocol.AUTH_DENY -> putLog(message);
             case ChatProtocol.REGISTER_ACCESS -> putLog("Registration access");
-            case ChatProtocol.REGISTER_DENY -> putLog(strArray[1]);
             case ChatProtocol.USER_LIST -> {
                 String users = message.substring(ChatProtocol.USER_LIST.length() + ChatProtocol.DELIMITER.length());
                 String[] usersArray = users.split(ChatProtocol.DELIMITER);
                 Arrays.sort(usersArray);
                 usersList.setListData(usersArray);
             }
-            case ChatProtocol.MESSAGE_BROADCAST -> putLog(String.format("%s: %s: %s",
-                    DATE_FORMAT.format(Long.parseLong(strArray[1])),
-                    strArray[2], strArray[3]));
-            case ChatProtocol.MESSAGE_PRIVATE -> putLog(String.format("%s: %s private: %s",
-                    DATE_FORMAT.format(Long.parseLong(strArray[1])),
-                    strArray[2], strArray[3]));
+            case ChatProtocol.MESSAGE_BROADCAST -> onGetMessage(strArray, "%s: %s: %s");
+            case ChatProtocol.MESSAGE_PRIVATE -> onGetMessage(strArray, "%s: %s private: %s");
             case ChatProtocol.UPDATE_NICKNAME_ACCESS -> {
                 this.nickname = strArray[1];
                 putLog("Nickname was changed");
             }
-            case ChatProtocol.UPDATE_NICKNAME_DENY -> putLog(strArray[1]);
+            case ChatProtocol.REGISTER_DENY, ChatProtocol.UPDATE_NICKNAME_DENY -> putLog(strArray[1]);
             default -> throw new RuntimeException("Unknown message type: " + messageType);
         }
+    }
+
+    private void onGetMessage(String[] strArray, String s) {
+        String textLog = String.format(s, DATE_FORMAT.format(Long.parseLong(strArray[1])), strArray[2], strArray[3]);
+        putLog(textLog);
+        System.out.print(textLog);
+        messagesLog.write(textLog);
     }
 
     @Override
